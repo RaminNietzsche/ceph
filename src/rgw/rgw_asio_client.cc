@@ -14,10 +14,12 @@ using namespace rgw::asio;
 
 ClientIO::ClientIO(parser_type& parser, bool is_ssl,
                    const endpoint_type& local_endpoint,
-                   const endpoint_type& remote_endpoint)
+                   const endpoint_type& remote_endpoint,
+                   std::string_view extra_response_headers)
   : parser(parser), is_ssl(is_ssl),
     local_endpoint(local_endpoint),
     remote_endpoint(remote_endpoint),
+    extra_response_headers(extra_response_headers),
     txbuf(*this),
     keepalive(parser.keep_alive()),
     expect100continue(parser.get()[beast::http::field::expect] == "100-continue")
@@ -152,7 +154,12 @@ size_t ClientIO::complete_header()
     sent += txbuf.sputn(timestr, strlen(timestr));
   }
 
-  if (keep_alive()) {
+  if (extra_response_headers.size()) {
+    sent += txbuf.sputn(extra_response_headers.data(),
+                        extra_response_headers.size());
+  }
+
+  if (keepalive()) {
     constexpr char CONN_KEEP_ALIVE[] = "Connection: Keep-Alive\r\n";
     sent += txbuf.sputn(CONN_KEEP_ALIVE, sizeof(CONN_KEEP_ALIVE) - 1);
   } else {
