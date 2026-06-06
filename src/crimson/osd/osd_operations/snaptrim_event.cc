@@ -78,8 +78,11 @@ SnapTrimEvent::start()
    * pipeline stages. https://tracker.ceph.com/issues/66473 */
   ShardServices &shard_services = pg->get_shard_services();
   {
+    logger().debug("{}: waiting for pg background_process_lock", *this);
     co_await pg->background_process_lock.lock_with_op(*this);
+    logger().debug("{}: acquired pg background_process_lock", *this);
     auto unlocker = seastar::defer([this] {
+      logger().debug("{}: releasing pg background_process_lock", *this);
       pg->background_process_lock.unlock();
     });
 
@@ -100,6 +103,8 @@ SnapTrimEvent::start()
     });
     auto to_trim = co_await std::move(to_trim_fut);
 
+    logger().debug("{}: snap_mapper returned {} object(s) for this batch",
+                   *this, to_trim.size());
     if (to_trim.empty()) {
       // the legit ENOENT -> done
       logger().debug("{}: to_trim is empty! Stopping iteration", *this);
@@ -115,8 +120,9 @@ SnapTrimEvent::start()
 	  snapid));
     }
 
-    logger().debug("{}: awaiting completion", *this);
+    logger().debug("{}: awaiting completion ({} subevent(s))", *this, to_trim.size());
     co_await subop_blocker.interruptible_wait_completion();
+    logger().debug("{}: all subevents completed this round", *this);
   }
 
   if (needs_pause) {
@@ -405,6 +411,7 @@ SnapTrimObjSubEvent::start()
     std::ignore = handle.complete().then([opref = std::move(opref)] {});
   });
 
+  logger().debug("{}: entering obc pipeline process", *this);
   co_await enter_stage<interruptor>(
     obc_orderer->obc_pp().process);
 
@@ -419,8 +426,9 @@ SnapTrimObjSubEvent::start()
     obc_manager, RWState::RWWRITE
   ).handle_error_interruptible(
     remove_or_update_iertr::pass_further{},
-    crimson::ct_error::assert_all{fmt::format(
-      "{} error SnapTrimObjSubEvent::snap_trim_obj_subevent_ret_t with {}", *this, coid).c_str()}
+    crimson::ct_error::assert_all(
+      "{} error SnapTrimObjSubEvent::snap_trim_obj_subevent_ret_t with {}",
+      std::cref(*this), coid)
   );
 
   logger().debug("{}: got obc={}", *this, obc_manager.get_obc()->get_oid());
@@ -428,11 +436,14 @@ SnapTrimObjSubEvent::start()
   auto all_completed = interruptor::now();
   {
     auto unlocker = seastar::defer([this] {
+      logger().debug("{}: releasing submit_lock", *this);
       pg->submit_lock.unlock();
     });
     // as with PG::submit_executer, we need to build the pg log entries
     // and submit the transaction atomically
+    logger().debug("{}: acquiring submit_lock", *this);
     co_await interruptor::make_interruptible(pg->submit_lock.lock());
+    logger().debug("{}: submit_lock held", *this);
 
     logger().debug("{}: calling remove_or_update obc={}",
 		   *this, obc_manager.get_obc()->get_oid());
@@ -448,11 +459,14 @@ SnapTrimObjSubEvent::start()
       std::move(osd_op_p),
       std::move(log_entries)
     );
+    logger().debug("{}: transaction submitted, waiting local apply", *this);
     co_await std::move(submitted);
   }
 
+  logger().debug("{}: entering wait_repop", *this);
   co_await enter_stage<interruptor>(obc_orderer->obc_pp().wait_repop);
 
+  logger().debug("{}: waiting repop completion future", *this);
   co_await std::move(all_completed);
 
   logger().debug("{}: completed", *this);

@@ -13,6 +13,10 @@
 * ceph-volume: Raw BlueStore OSD preparation now pre-formats NVMe devices and
   skips the slower BlueStore discard phase,reducing mkfs time on
   very large namespaces.
+* RGW: Omap backing for the RGW Datalog is deprecated and support will be removed in a future version.
+  - The `rgw default data log backing` option is removed and it is no longer
+    possible to create clusters with an omap based datalog.
+  - `radosgw-admin datalog type` will only accept `--log_type=fifo`.
 * RGW: Bucket Logging suppports creating log buckets in EC pools.
   Implicit logging object commits are now performed asynchronously.
 * RGW: radosgw-admin bucket list now supports pagination for versioned buckets by using
@@ -106,9 +110,23 @@
   behavior is controlled by the new ``mgr_stats_period_autotune`` (default:
   ``true``) and ``mgr_stats_period_autotune_queue_threshold`` (default: ``100``)
   config options.
+* MGR: The Manager cache system has been redesigned from a TTL-based (time-to-live)
+  approach to an event-driven invalidation strategy. The cache now automatically
+  invalidates entries when underlying cluster maps are updated. The cache is enabled
+  by default. The previous `mgr_ttl_cache_expire_seconds` configuration option has
+  been removed and replaced with `mgr_map_cache_enabled` (default: true).
+* The ``last_degraded`` timestamp is added to the ``pg_stat_t`` structure to
+  track the initial point of redundancy loss when a PG enters an undersized or
+  degraded state. This timestamp is latched until the PG returns to a clean
+  state and a subsequent redundancy loss occurs. Used in conjunction with
+  ``last_clean``, the ``last_degraded`` timestamp enables the calculation of
+  data vulnerability and durability scores.
 
 >=20.0.0
 
+* Client: New config value osd_min_split_replica_read_size, which allows control
+  of the minimum size a read can be when a client breaks up the read into multiple
+  smaller reads across PG shards.
 * RADOS: The lead Monitor and stretch mode status are now displayed by `ceph status`.
   Related Tracker: https://tracker.ceph.com/issues/70406
 * RGW: The User Account feature introduced in Squid provides first-class support for
