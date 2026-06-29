@@ -343,6 +343,8 @@ private:
   // monitor session
   utime_t last_keepalive;
   utime_t last_send_log;
+  ceph::coarse_mono_time dispatch_queue_throttle_prev_log {
+    ceph::coarse_mono_clock::zero()};
 
   void tick();
   void schedule_tick();

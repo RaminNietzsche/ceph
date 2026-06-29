@@ -1058,12 +1058,13 @@ will be reported in ``ceph health detail``. The warning state is cleared when
 the condition clears.
 
 :confval:`ms_dispatch_throttle_bytes` represents the total size of messages
-waiting to be dispatched. This configuration limit messages that are read off
+waiting to be dispatched. This configuration limits messages that are read off
 the network but still being processed.
 
-:confval:`ms_dispatch_throttle_log_interval` is the interval in seconds to
-show the cluster warning and health warning. Setting it to 0 disables the
-cluster warning and health warning.
+:confval:`ms_dispatch_throttle_log_interval` is the interval in seconds between
+cluster log and health warnings while the dispatch throttle limit is exceeded.
+Setting it to ``0`` disables both the cluster log warning and the
+``DISPATCH_QUEUE_THROTTLE`` health warning.
 
 To change the default values, run a command of the following form:
 

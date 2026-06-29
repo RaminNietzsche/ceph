@@ -922,12 +922,22 @@ bool MonClient::ms_handle_throttle(ms_throttle_t ttype, const ThrottleInfo& tinf
     break; // TODO
   case ms_throttle_t::DISPATCH_QUEUE:
     {
-      //cluster log a warning that Dispatch Queue Throttle Limit hit
-      if (!log_client) {
-        return false; //cannot handle if the daemon didn't setup a log_client for me
+      if (!log_client || !messenger) {
+        return false;
       }
+      std::chrono::seconds configured_interval =
+        messenger->dispatch_throttle_log_interval.load();
+      if (!configured_interval.count()) {
+        break;
+      }
+      ceph::coarse_mono_time now = ceph::coarse_mono_clock::now();
+      if (std::chrono::duration_cast<std::chrono::seconds>(
+            now - dispatch_queue_throttle_prev_log) < configured_interval) {
+        break;
+      }
+      dispatch_queue_throttle_prev_log = now;
       LogChannelRef clog = log_client->create_channel(CLOG_CHANNEL_CLUSTER);
-      clog->warn() << "Throttler Limit has been hit. "
+      clog->warn() << "Dispatch queue throttle limit exceeded. "
                    << "Some message processing may be significantly delayed. "
                    << "Additional info: " << tinfo.takenslots << "/"
                    << tinfo.maxslots << " bytes used, "

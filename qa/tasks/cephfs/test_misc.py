@@ -534,7 +534,7 @@ class TestMisc(CephFSTestCase):
         self.config_set('global', 'ms_dispatch_throttle_bytes', 10)
         self.config_set('global', 'ms_dispatch_throttle_log_interval', 1)
         # Create files & split across 10 directories, 1000 each.
-        with self.assert_cluster_log("DISPATCH_QUEUE_THROTTLE",
+        with self.assert_cluster_log("Dispatch queue throttle limit exceeded",
                                      invert_match=False, watch_channel="cluster"):
             for i in range(0, 10):
                 self.mount_a.create_n_files("dir{0}/file".format(i), 1000, sync=False)

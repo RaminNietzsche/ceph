@@ -1655,19 +1655,14 @@ CtPtr ProtocolV2::throttle_dispatch_queue() {
           << connection->dispatch_queue->dispatch_throttler.get_current() << "/"
           << connection->dispatch_queue->dispatch_throttler.get_max()
           << " failed, just wait." << dendl;
-      ceph::coarse_mono_time throttle_now = ceph::coarse_mono_clock::now();
       std::chrono::seconds configured_interval = msgr->dispatch_throttle_log_interval.load();
       if (configured_interval.count()) {
-        if (std::chrono::duration_cast<std::chrono::seconds>(throttle_now - throttle_prev_log) >=
-            configured_interval) {
-          //Cluster logging that throttling is occurring.
-          Dispatcher::ThrottleInfo tinfo;
-          tinfo.takenslots = connection->dispatch_queue->dispatch_throttler.get_current();
-          tinfo.maxslots = connection->dispatch_queue->dispatch_throttler.get_max();
-          tinfo.failedrequests = connection->dispatch_queue->dispatch_throttler.get_failed();
-          msgr->ms_deliver_throttle(ms_throttle_t::DISPATCH_QUEUE, tinfo);
-          throttle_prev_log = throttle_now;
-        }
+        Dispatcher::ThrottleInfo tinfo;
+        tinfo.takenslots = connection->dispatch_queue->dispatch_throttler.get_current();
+        tinfo.maxslots = connection->dispatch_queue->dispatch_throttler.get_max();
+        tinfo.failedrequests = connection->dispatch_queue->dispatch_throttler.get_failed();
+        msgr->ms_deliver_throttle(ms_throttle_t::DISPATCH_QUEUE, tinfo);
+        dispatch_queue_throttle_active = true;
       }
       // following thread pool deal with th full message queue isn't a
       // short time, so we can wait a ms.
@@ -1678,14 +1673,10 @@ CtPtr ProtocolV2::throttle_dispatch_queue() {
       }
       return nullptr;
     }
-    else {
-      //Don't deliver ms_throttle_t::NONE forever. Limit it for THROTTLE_DELIVER_INTERVAL seconds
-      //since the last ms_throttle_t::DISPATCH_QUEUE delivery.
-      if (std::chrono::duration_cast<std::chrono::seconds>
-          (ceph::coarse_mono_clock::now() - throttle_prev_log) <= THROTTLE_DELIVER_INTERVAL) {
-        Dispatcher::ThrottleInfo tinfo = {0, 0, 0};
-        msgr->ms_deliver_throttle(ms_throttle_t::NONE, tinfo);
-      }
+    else if (dispatch_queue_throttle_active) {
+      Dispatcher::ThrottleInfo tinfo = {0, 0, 0};
+      msgr->ms_deliver_throttle(ms_throttle_t::NONE, tinfo);
+      dispatch_queue_throttle_active = false;
     }
   }
 
