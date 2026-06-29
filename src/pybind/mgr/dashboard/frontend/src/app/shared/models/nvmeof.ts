@@ -72,12 +72,24 @@ export interface NvmeofGatewayGroup extends CephServiceSpec {
   nodeCount: number;
 }
 
+export enum NvmeofSubsystemAuthType {
+  NO_AUTH = 'No authentication',
+  UNIDIRECTIONAL = 'Unidirectional',
+  BIDIRECTIONAL = 'Bi-directional'
+}
+
+export enum NvmeofGatewayNodeMode {
+  SELECTOR = 'selector',
+  DETAILS = 'details'
+}
+
 export enum AUTHENTICATION {
   Unidirectional = 'unidirectional',
   Bidirectional = 'bidirectional',
   None = 'none'
 }
 
+export const ALLOW_ALL_HOST = '*';
 export const NO_AUTH = 'No authentication';
 
 export const HOST_TYPE = {
@@ -169,4 +181,6 @@ export type AuthStepType = {
 export type DetailsStepType = {
   nqn: string;
   listeners: Array<string>;
+  listenerMode?: string;
+  subnetMask?: string;
 };

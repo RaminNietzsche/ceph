@@ -97,7 +97,7 @@ import { NvmeofGatewaySubsystemComponent } from './nvmeof-gateway-subsystem/nvme
 import { NvmeofNamespaceExpandModalComponent } from './nvmeof-namespace-expand-modal/nvmeof-namespace-expand-modal.component';
 import { NvmeGatewayViewComponent } from './nvme-gateway-view/nvme-gateway-view.component';
 import { NvmeGatewayViewBreadcrumbResolver } from './nvme-gateway-view/nvme-gateway-view-breadcrumb.resolver';
-import { NvmeofGatewayNodeMode } from '~/app/shared/enum/nvmeof.enum';
+import { NvmeofGatewayNodeMode } from '~/app/shared/models/nvmeof';
 import { NvmeofGatewayNodeAddModalComponent } from './nvmeof-gateway-node/nvmeof-gateway-node-add-modal/nvmeof-gateway-node-add-modal.component';
 import { NvmeofSubsystemNamespacesListComponent } from './nvmeof-subsystem-namespaces-list/nvmeof-subsystem-namespaces-list.component';
 import { NvmeofSubsystemOverviewComponent } from './nvmeof-subsystem-overview/nvmeof-subsystem-overview.component';
@@ -105,6 +105,7 @@ import { NvmeSubsystemViewBreadcrumbResolver } from './nvme-subsystem-view/nvme-
 import { NvmeSubsystemViewComponent } from './nvme-subsystem-view/nvme-subsystem-view.component';
 import { NvmeofSubsystemPerformanceComponent } from './nvmeof-subsystem-performance/nvmeof-subsystem-performance.component';
 import { NvmeofTabsComponent } from './nvmeof-tabs/nvmeof-tabs.component';
+import { NvmeofGatewayGroupDeleteGuardModalComponent } from './nvmeof-gateway-group/nvmeof-gateway-group-delete-guard-modal.component';
 
 @NgModule({
   imports: [
@@ -194,7 +195,8 @@ import { NvmeofTabsComponent } from './nvmeof-tabs/nvmeof-tabs.component';
     NvmeofSubsystemsStepFourComponent,
     NvmeofSubsystemOverviewComponent,
     NvmeofSubsystemPerformanceComponent,
-    NvmeofTabsComponent
+    NvmeofTabsComponent,
+    NvmeofGatewayGroupDeleteGuardModalComponent
   ],
 
   exports: [RbdConfigurationListComponent, RbdConfigurationFormComponent]
