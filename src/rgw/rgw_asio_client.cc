@@ -159,7 +159,7 @@ size_t ClientIO::complete_header()
                         extra_response_headers.size());
   }
 
-  if (keepalive()) {
+  if (keep_alive()) {
     constexpr char CONN_KEEP_ALIVE[] = "Connection: Keep-Alive\r\n";
     sent += txbuf.sputn(CONN_KEEP_ALIVE, sizeof(CONN_KEEP_ALIVE) - 1);
   } else {
