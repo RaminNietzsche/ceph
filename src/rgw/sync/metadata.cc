@@ -671,15 +671,10 @@ static auto try_sync_shard(const DoutPrefixProvider* dpp,
   std::string cookie = "TODO";
   auto lock = ShardLockClient{log_status, shard, cookie};
 
-  try {
-    co_await with_lease(lock, duration,
-        sync_shard_locked(dpp, period, shard, peer_meta, local_meta,
-                          local_index, peer_log, local_log,
-                          log_status, reset_backoff));
-  } catch (const lease_aborted& e) {
-    ldpp_dout(dpp, 0) << "WARNING: aborted sync on lock renewal failure" << dendl;
-    std::rethrow_exception(e.original_exception());
-  }
+  co_await with_lease(lock, duration,
+      sync_shard_locked(dpp, period, shard, peer_meta, local_meta,
+                        local_index, peer_log, local_log,
+                        log_status, reset_backoff));
 }
 
 class ShardPrefix : public DoutPrefixPipe {
@@ -718,6 +713,9 @@ auto sync_shard(const DoutPrefixProvider* dpp,
       co_await try_sync_shard(dpp, period, shard, peer_meta, local_meta,
                               local_index, peer_log, local_log,
                               log_status, reset_backoff);
+    } catch (const lease_aborted& e) {
+      ldpp_dout(dpp, 0) << "WARNING: aborted sync on lock renewal failure"
+          << dendl;
     } catch (const boost::system::system_error& e) {
       if (e.code() == boost::system::errc::timed_out ||
           e.code() == boost::system::errc::device_or_resource_busy) {
