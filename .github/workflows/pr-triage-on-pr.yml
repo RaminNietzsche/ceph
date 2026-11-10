@@ -1,0 +1,44 @@
+# SAMPLE for ceph fork: .github/workflows/pr-triage-on-pr.yml
+# Posts/updates a read-only triage comment (similar PRs, overlap, duplicates).
+
+name: pr-triage on PR
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: ceph/ceph PR number to query against the KB
+        required: true
+        type: number
+      comment_pr_number:
+        description: PR number to comment on in this repo (0 = same as pr_number)
+        required: false
+        type: number
+        default: 0
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+
+concurrency:
+  group: pr-triage-${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    uses: RaminNietzsche/pr-triage/.github/workflows/reusable-query-pr.yml@main
+    with:
+      pr_number: ${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }}
+      comment_pr_number: ${{ github.event_name == 'workflow_dispatch' && inputs.comment_pr_number || 0 }}
+      config: configs/ceph.yml
+      tool_ref: main
+      kb_workflow_file: pr-triage-kb.yml
+      all_findings: true
+      refresh_target: true
+      post_comment: true
+      post_on_query_failure: true
+      github_repo_links: ceph/ceph
+    secrets: inherit
