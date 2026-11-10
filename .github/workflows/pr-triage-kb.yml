@@ -1,0 +1,25 @@
+# SAMPLE for ceph/ceph fork: .github/workflows/pr-triage-kb.yml
+# Builds the daily KB via reusable workflow from pr-triage (read-only).
+
+name: pr-triage KB
+
+on:
+  schedule:
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-triage-kb
+  cancel-in-progress: false
+
+jobs:
+  build:
+    uses: RaminNietzsche/pr-triage/.github/workflows/reusable-build-kb.yml@main
+    with:
+      config: configs/ceph.yml
+      tool_ref: main   # pin SHA or tag when stabilizing
+      run_batch_report: false
+    secrets: inherit
