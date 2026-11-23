@@ -1,6 +1,5 @@
 ---
-# Fork / self-hosted CI: post cert-review PR comment (same body as MCP format_pr_review).
-# Needs cert-review-mcp >= 1.4.2 image for --github-footer on `review-pr`.
+# Fork CI: cert-review PR comment (same body as MCP format_pr_review).
 name: "Pull Request cert-review (MCP)"
 on:
   pull_request_target:
@@ -33,25 +32,50 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
           PR_TITLE: ${{ github.event.pull_request.title }}
-          CERT_REVIEW_IMAGE: raminnietzsche/cert-review-mcp:1.4.2
         run: |
           set -euo pipefail
-          docker pull "$CERT_REVIEW_IMAGE" || docker pull raminnietzsche/cert-review-mcp:latest
-          IMAGE=$(docker image inspect "$CERT_REVIEW_IMAGE" >/dev/null 2>&1 && echo "$CERT_REVIEW_IMAGE" || echo raminnietzsche/cert-review-mcp:latest)
-          docker run --rm \
-            -w "$GITHUB_WORKSPACE" \
-            -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" \
-            "$IMAGE" \
-            cert-review review-pr \
-              --repo "$GITHUB_WORKSPACE" \
-              --base "$BASE" \
-              --head "$HEAD" \
-              --title "$PR_TITLE" \
-              --profile ceph \
-              --min-confidence 0.5 \
-              --fail-on never \
-              --github-footer pull_request_target \
-              -o cert-review-pr-comment.md
+          IMAGE=raminnietzsche/cert-review-mcp:latest
+          docker pull "$IMAGE"
+
+          run_review() {
+            docker run --rm \
+              -w "$GITHUB_WORKSPACE" \
+              -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" \
+              "$IMAGE" \
+              cert-review review-pr \
+                --repo "$GITHUB_WORKSPACE" \
+                --base "$BASE" \
+                --head "$HEAD" \
+                --title "$PR_TITLE" \
+                --profile ceph \
+                --min-confidence 0.5 \
+                --fail-on never \
+                "$@" \
+                -o cert-review-pr-comment.md
+          }
+
+          append_footer() {
+            if ! grep -q 'cert-review-mcp · auto-generated' cert-review-pr-comment.md; then
+              cat >> cert-review-pr-comment.md <<'EOF'
+
+          <details>
+          <summary>cert-review-mcp · auto-generated</summary>
+
+          Report drafted with **[cert-review-mcp](https://github.com/RaminNietzsche/cert-review-mcp)** (`pull_request_target`). Findings are candidates; project QA and human review still apply.
+
+          </details>
+          EOF
+            fi
+          }
+
+          if run_review --github-footer pull_request_target 2>/dev/null; then
+            true
+          else
+            run_review
+            append_footer
+          fi
+
+          test -s cert-review-pr-comment.md
 
       - name: Post or update PR comment
         uses: peter-evans/create-or-update-comment@v4
