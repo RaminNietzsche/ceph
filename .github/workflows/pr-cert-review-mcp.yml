@@ -39,10 +39,11 @@ jobs:
 
           run_review() {
             docker run --rm \
+              --entrypoint cert-review \
               -w "$GITHUB_WORKSPACE" \
               -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" \
               "$IMAGE" \
-              cert-review review-pr \
+              review-pr \
                 --repo "$GITHUB_WORKSPACE" \
                 --base "$BASE" \
                 --head "$HEAD" \
@@ -77,10 +78,18 @@ jobs:
 
           test -s cert-review-pr-comment.md
 
+      - name: Find existing cert-review comment
+        uses: peter-evans/find-comment@v3
+        id: find
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: github-actions[bot]
+          body-includes: "<!-- cert-review -->"
+
       - name: Post or update PR comment
         uses: peter-evans/create-or-update-comment@v4
         with:
+          comment-id: ${{ steps.find.outputs.comment-id }}
           issue-number: ${{ github.event.pull_request.number }}
           body-path: cert-review-pr-comment.md
           edit-mode: replace
-          body-includes: "<!-- cert-review -->"
