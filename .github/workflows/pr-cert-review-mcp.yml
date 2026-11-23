@@ -1,7 +1,7 @@
----
-# Fork CI: cert-review PR comment (same body as MCP format_pr_review).
+# Canonical copy — same as examples/github-workflow-pull-request-target-comment.yml
+# Install: cp ci/github/pr-cert-review-mcp.yml .github/workflows/
 name: "Pull Request cert-review (MCP)"
-on:
+"on":
   pull_request_target:
     types: [opened, synchronize, reopened]
     paths:
