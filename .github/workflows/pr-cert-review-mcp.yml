@@ -1,0 +1,62 @@
+---
+# Fork / self-hosted CI: post cert-review PR comment (same body as MCP format_pr_review).
+# Needs cert-review-mcp >= 1.4.2 image for --github-footer on `review-pr`.
+name: "Pull Request cert-review (MCP)"
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "**/*.c"
+      - "**/*.cc"
+      - "**/*.cpp"
+      - "**/*.cxx"
+      - "**/*.h"
+      - "**/*.hpp"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  pr-cert-review-mcp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Run cert-review review-pr
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          CERT_REVIEW_IMAGE: raminnietzsche/cert-review-mcp:1.4.2
+        run: |
+          set -euo pipefail
+          docker pull "$CERT_REVIEW_IMAGE" || docker pull raminnietzsche/cert-review-mcp:latest
+          IMAGE=$(docker image inspect "$CERT_REVIEW_IMAGE" >/dev/null 2>&1 && echo "$CERT_REVIEW_IMAGE" || echo raminnietzsche/cert-review-mcp:latest)
+          docker run --rm \
+            -w "$GITHUB_WORKSPACE" \
+            -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" \
+            "$IMAGE" \
+            cert-review review-pr \
+              --repo "$GITHUB_WORKSPACE" \
+              --base "$BASE" \
+              --head "$HEAD" \
+              --title "$PR_TITLE" \
+              --profile ceph \
+              --min-confidence 0.5 \
+              --fail-on never \
+              --github-footer pull_request_target \
+              -o cert-review-pr-comment.md
+
+      - name: Post or update PR comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body-path: cert-review-pr-comment.md
+          edit-mode: replace
+          body-includes: "<!-- cert-review -->"
