@@ -5,6 +5,7 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 jobs:
   pr-triage:
+    if: github.repository == 'ceph/ceph'
     runs-on: ubuntu-latest
     steps:
       - name: Assign labels based on modified files
