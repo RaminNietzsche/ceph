@@ -904,8 +904,6 @@ struct LruBufferCacheShard : public BlueStore::BufferCacheShard {
       BlueStore::Buffer *b = &*i;
       ceph_assert(b->is_clean());
       dout(20) << __func__ << " rm " << *b << dendl;
-      ceph_assert(*(b->cache_age_bin) >= b->length);
-      *(b->cache_age_bin) -= b->length;
       b->space->_rm_buffer(this, b);
     }
     num = lru.size();
@@ -5668,7 +5666,7 @@ void BlueStore::trim_free_space(const string& type, std::ostream& outss)
     ceph_assert(len > 0);
     interval_set<uint64_t> to_discard;
     to_discard.union_insert(off, len);
-    bdev->try_discard(to_discard, false);
+    bdev->try_discard(to_discard, false, true);
   };
   if (type == "bdev-block") {
     if (!bdev->is_discard_supported()) {
